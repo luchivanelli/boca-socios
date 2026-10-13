@@ -1,26 +1,57 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+/* Paleta de Boca Juniors: azul profundo con detalles en amarillo oro. */
+@theme {
+  --color-boca-azul: #0b2d6b;
+  --color-boca-azul-claro: #16418f;
+  --color-boca-azul-oscuro: #071d47;
+  --color-boca-amarillo: #ffd100;
+  --color-boca-amarillo-oscuro: #e0b400;
+  --color-boca-amarillo-suave: #fff4b8;
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+html {
+  color-scheme: light;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: #f3f5fa;
+  color: #0f172a;
+}
+
+/* Franja amarilla característica debajo del encabezado */
+.franja-boca {
+  background: linear-gradient(
+    90deg,
+    var(--color-boca-amarillo) 0%,
+    var(--color-boca-amarillo) 100%
+  );
+  height: 6px;
+}
+
+input,
+select,
+textarea {
+  background: #fff;
+}
+
+button, a {
+  cursor: pointer;
+}
+
+/*
+ * Los campos van siempre en 16px: evita el zoom automático de Safari en iPhone
+ * (que se dispara con fuentes menores) y mantiene el mismo tamaño en escritorio.
+ * El line-height ajustado los mantiene compactos.
+ */
+input,
+select,
+textarea {
+  font-size: 16px;
+  line-height: 1.25;
 }

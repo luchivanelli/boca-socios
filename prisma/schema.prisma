@@ -1,0 +1,63 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+enum Estado {
+  ACTIVO
+  INACTIVO
+}
+
+enum MetodoPago {
+  TRANSFERENCIA
+  DEBITO_AUTOMATICO
+  COBRADOR
+}
+
+model Socio {
+  id            Int        @id @default(autoincrement())
+  nombre        String
+  apellido      String
+  nroSocio      Int        @unique
+  dni           String     @unique
+  localidad     String
+  direccion     String?
+  telefono      String?
+  estado        Estado     @default(ACTIVO)
+  carnet        Boolean    @default(false)
+  metodoPago    MetodoPago @default(TRANSFERENCIA)
+  /// Mes de ingreso a la peña (siempre día 1), o null si no se conoce. Sirve para anular cuotas anteriores.
+  fechaAlta     DateTime?  @db.Date
+  /// Notas libres de la comisión (opcional).
+  observaciones String?
+  pagos         Pago[]
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+
+  @@index([apellido, nombre])
+}
+
+/// Estado de una cuota mensual. Si no hay fila, la cuota está impaga.
+enum EstadoCuota {
+  PAGO // la cruz del Excel
+  NULO // no corresponde cobrarla (ej. meses previos al alta del socio)
+}
+
+/// Una fila por cuota mensual marcada como paga o nula.
+model Pago {
+  id      Int         @id @default(autoincrement())
+  socioId Int
+  socio   Socio       @relation(fields: [socioId], references: [id], onDelete: Cascade)
+  anio    Int
+  mes     Int // 1 = enero ... 12 = diciembre
+  estado  EstadoCuota @default(PAGO)
+  fecha   DateTime    @default(now())
+
+  @@unique([socioId, anio, mes])
+  @@index([anio, mes])
+}
