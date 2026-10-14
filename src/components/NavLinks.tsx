@@ -2,13 +2,21 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { AlertTriangle, UserPlus, Users, type LucideIcon } from "lucide-react";
+import { AlertTriangle, Gift, UserPlus, Users, type LucideIcon } from "lucide-react";
+import type { Rol } from "@/lib/auth-token";
 
-const links: { href: string; label: string; Icono: LucideIcon }[] = [
+type Enlace = { href: string; label: string; Icono: LucideIcon; soloSuperadmin?: boolean };
+
+const links: Enlace[] = [
   { href: "/", label: "Socios", Icono: Users },
   { href: "/deudores", label: "Deudores", Icono: AlertTriangle },
+  { href: "/sorteo", label: "Sorteo", Icono: Gift, soloSuperadmin: true },
   { href: "/socios/nuevo", label: "Nuevo", Icono: UserPlus },
 ];
+
+function enlacesPara(rol: Rol) {
+  return links.filter((l) => !l.soloSuperadmin || rol === "superadmin");
+}
 
 function activo(pathname: string, href: string) {
   if (href === "/") return pathname === "/" || (pathname.startsWith("/socios/") && pathname !== "/socios/nuevo");
@@ -16,11 +24,11 @@ function activo(pathname: string, href: string) {
 }
 
 /** Navegación de escritorio (en el encabezado). */
-export function NavEscritorio() {
+export function NavEscritorio({ rol }: { rol: Rol }) {
   const pathname = usePathname();
   return (
     <nav className="hidden items-center gap-1 text-sm font-medium sm:flex">
-      {links.map(({ href, label, Icono }) => (
+      {enlacesPara(rol).map(({ href, label, Icono }) => (
         <Link
           key={href}
           href={href}
@@ -37,11 +45,15 @@ export function NavEscritorio() {
 }
 
 /** Barra inferior fija para celular. */
-export function NavMovil() {
+export function NavMovil({ rol }: { rol: Rol }) {
   const pathname = usePathname();
+  const enlaces = enlacesPara(rol);
   return (
-    <nav className="fixed inset-x-0 bottom-0 z-30 grid grid-cols-3 border-t-4 border-boca-amarillo bg-boca-azul pb-[env(safe-area-inset-bottom)] sm:hidden">
-      {links.map(({ href, label, Icono }) => {
+    <nav
+      style={{ gridTemplateColumns: `repeat(${enlaces.length}, minmax(0, 1fr))` }}
+      className="fixed inset-x-0 bottom-0 z-30 grid border-t-4 border-boca-amarillo bg-boca-azul pb-[env(safe-area-inset-bottom)] sm:hidden"
+    >
+      {enlaces.map(({ href, label, Icono }) => {
         const esActivo = activo(pathname, href);
         return (
           <Link

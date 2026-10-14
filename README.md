@@ -89,6 +89,25 @@ todos los meses, así que no se marcan pagos a mano y nunca figuran como deudore
 
 El selector de año sirve para ver o corregir el historial; la deuda siempre se calcula hasta hoy.
 
+## Login y roles
+
+La app pide usuario y contraseña. Hay dos usuarios fijos definidos en `.env` (no hay tabla de usuarios):
+
+- **Administrador** (`ADMIN_USUARIO` / `ADMIN_CLAVE`): acceso a todo menos a la sección Sorteo.
+- **Super administrador** (`SUPERADMIN_USUARIO` / `SUPERADMIN_CLAVE`): acceso a todo.
+
+La sesión es una cookie firmada con `AUTH_SECRET` que dura 30 días. El archivo `src/proxy.ts`
+(el middleware de Next 16) redirige al login si no hay sesión y bloquea `/sorteo` para el admin.
+
+## Sorteo
+
+En **Sorteo** participan solo los socios activos al día (incluidos los de débito automático).
+Se elige título y cantidad de ganadores, y la animación corre a pantalla completa en formato
+vertical 9:16 para grabar la pantalla y subirla a Instagram: los nombres giran, se frenan y
+revelan a cada ganador con confeti; al final queda la lista completa. Los ganadores se eligen
+con el generador aleatorio del navegador antes de empezar y un socio no puede salir dos veces.
+El resultado no se guarda en la base.
+
 ## Celular
 
 La app está pensada para usarse desde el teléfono: barra de navegación inferior, tarjetas por

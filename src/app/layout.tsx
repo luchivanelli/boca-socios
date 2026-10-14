@@ -2,6 +2,8 @@ import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import Link from "next/link";
 import { NavEscritorio, NavMovil } from "@/components/NavLinks";
+import { LogoutButton } from "@/components/LogoutButton";
+import { getSesion } from "@/lib/auth";
 import Image from "next/image";
 import { NOMBRE_PENA } from "@/lib/constants";
 import logo from "../../public/favicon-peña.png";
@@ -28,13 +30,18 @@ export const viewport: Viewport = {
   initialScale: 1,
 };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  const sesion = await getSesion();
   return (
     <html
       lang="es"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">
+        {!sesion ? (
+          <main className="mx-auto w-full max-w-[96rem] flex-1 px-3 py-6 sm:px-4">{children}</main>
+        ) : (
+          <>
         <header className="sticky top-0 z-20 bg-boca-azul text-white shadow-md">
           <div className="mx-auto flex max-w-[96rem] items-center justify-between gap-3 px-4 py-2.5">
             <Link href="/" className="flex items-center gap-3">
@@ -47,11 +54,14 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                 className="h-9 sm:w-11 w-9 sm:h-11 rounded-full"
               />
               <span className="leading-tight">
-                <span className="block text-base font-bold sm:text-lg">{NOMBRE_PENA}</span>
+                <span className="block text-sm font-bold sm:text-lg">{NOMBRE_PENA}</span>
                 <span className="block text-xs text-boca-amarillo sm:text-base">Gestión de socios</span>
               </span>
             </Link>
-            <NavEscritorio />
+            <div className="flex items-center gap-1">
+              <NavEscritorio rol={sesion.rol} />
+              <LogoutButton />
+            </div>
           </div>
           <div className="franja-boca" />
         </header>
@@ -64,7 +74,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           {NOMBRE_PENA} · 💙💛
         </footer>
 
-        <NavMovil />
+        <NavMovil rol={sesion.rol} />
+          </>
+        )}
       </body>
     </html>
   );

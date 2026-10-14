@@ -193,7 +193,7 @@ export function ExportarPdf({ filas, hayFiltros }: Props) {
  * Columnas de texto largo: reparten el espacio restante con un mínimo razonable.
  */
 const ESTILO_COLUMNA: Partial<Record<ClaveColumna, Record<string, unknown>>> = {
-  nroSocio: { cellWidth: "wrap", halign: "right" },
+  nroSocio: { cellWidth: "wrap" },
   apellido: { cellWidth: "wrap" },
   nombre: { cellWidth: "wrap" },
   dni: { cellWidth: "wrap" },
