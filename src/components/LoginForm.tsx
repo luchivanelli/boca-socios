@@ -1,11 +1,12 @@
 "use client";
 
-import { useActionState } from "react";
-import { LogIn } from "lucide-react";
+import { useActionState, useState } from "react";
+import { Eye, EyeOff, LogIn } from "lucide-react";
 import { login } from "@/actions/auth";
 
 export function LoginForm({ next }: { next?: string }) {
   const [state, formAction, pendiente] = useActionState(login, null);
+  const [mostrarClave, setMostrarClave] = useState(false);
 
   return (
     <form action={formAction} className="space-y-4">
@@ -33,14 +34,25 @@ export function LoginForm({ next }: { next?: string }) {
         <label htmlFor="clave" className="mb-1 block text-sm font-medium text-slate-700">
           Contraseña
         </label>
-        <input
-          id="clave"
-          name="clave"
-          type="password"
-          autoComplete="current-password"
-          required
-          className={inputClase}
-        />
+        <div className="relative">
+          <input
+            id="clave"
+            name="clave"
+            type={mostrarClave ? "text" : "password"}
+            autoComplete="current-password"
+            required
+            className={`${inputClase} pr-11`}
+          />
+          <button
+            type="button"
+            onClick={() => setMostrarClave((v) => !v)}
+            aria-label={mostrarClave ? "Ocultar contraseña" : "Mostrar contraseña"}
+            aria-pressed={mostrarClave}
+            className="absolute inset-y-0 right-0 flex w-11 items-center justify-center text-slate-500 hover:text-boca-azul"
+          >
+            {mostrarClave ? <EyeOff className="h-5 w-5" aria-hidden /> : <Eye className="h-5 w-5" aria-hidden />}
+          </button>
+        </div>
       </div>
       <button
         type="submit"
