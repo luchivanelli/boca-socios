@@ -42,6 +42,18 @@ export function leerOrden(sp: SearchParams): Orden {
   return v && v in ORDENES ? (v as Orden) : ORDEN_POR_DEFECTO;
 }
 
+export const FILTROS_CUOTAS = {
+  "al-dia": "Al día",
+  deudores: "Deudores",
+} as const;
+
+export type FiltroCuotas = keyof typeof FILTROS_CUOTAS;
+
+export function leerCuotas(sp: SearchParams): FiltroCuotas | undefined {
+  const v = primero(sp.cuotas);
+  return v && v in FILTROS_CUOTAS ? (v as FiltroCuotas) : undefined;
+}
+
 export function leerEntero(sp: SearchParams, clave: string, porDefecto: number) {
   const n = Number(primero(sp[clave]));
   return Number.isInteger(n) && n >= 0 ? n : porDefecto;

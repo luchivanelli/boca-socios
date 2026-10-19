@@ -2,7 +2,10 @@ import type { Estado, EstadoCuota, MetodoPago, Prisma } from "@prisma/client";
 import { ORDEN_POR_DEFECTO, type Orden } from "./params";
 import { prisma } from "./prisma";
 
-export type SocioConPagos = Prisma.SocioGetPayload<{ include: { pagos: true } }>;
+/** Solo lo que hace falta de cada cuota: evita traer id, socioId y fecha en cada fila. */
+const PAGO_CAMPOS = { anio: true, mes: true, estado: true } as const;
+
+export type SocioConPagos = Prisma.SocioGetPayload<{ include: { pagos: { select: typeof PAGO_CAMPOS } } }>;
 export type Cuota = { anio: number; mes: number };
 type RegistroCuota = { anio: number; mes: number; estado: EstadoCuota };
 
@@ -44,7 +47,7 @@ export async function getSocios({
 
   return prisma.socio.findMany({
     where,
-    include: { pagos: true },
+    include: { pagos: { select: PAGO_CAMPOS } },
     orderBy: ORDEN_PRISMA[orden],
   });
 }
@@ -52,20 +55,27 @@ export async function getSocios({
 export async function getSocio(id: number) {
   return prisma.socio.findUnique({
     where: { id },
-    include: { pagos: { orderBy: [{ anio: "asc" }, { mes: "asc" }] } },
+    include: { pagos: { select: PAGO_CAMPOS, orderBy: [{ anio: "asc" }, { mes: "asc" }] } },
   });
 }
 
 /** Años con cuotas registradas, más el actual, para el selector de año. */
-export async function getAniosDisponibles() {
-  const filas = await prisma.pago.findMany({
-    distinct: ["anio"],
-    select: { anio: true },
-    orderBy: { anio: "desc" },
-  });
+/**
+ * Años con cuotas registradas (GROUP BY en la base, no trae todas las filas).
+ * Devuelve la lista para el selector (descendente, con el año actual) y el primer año
+ * desde el que se cuentan cuotas. Una sola consulta para ambas cosas.
+ */
+export async function getResumenAnios() {
+  const filas = await prisma.pago.groupBy({ by: ["anio"], orderBy: { anio: "desc" } });
+  const anioActual = new Date().getFullYear();
   const anios = new Set(filas.map((f) => f.anio));
-  anios.add(new Date().getFullYear());
-  return [...anios].sort((a, b) => b - a);
+  anios.add(anioActual);
+  const lista = [...anios].sort((a, b) => b - a);
+  return { anios: lista, anioInicio: Math.min(lista[lista.length - 1], anioActual) };
+}
+
+export async function getAniosDisponibles() {
+  return (await getResumenAnios()).anios;
 }
 
 /**
@@ -73,17 +83,14 @@ export async function getAniosDisponibles() {
  * Antes de ese año no se le debe nada a nadie.
  */
 export async function getAnioInicio() {
-  const primero = await prisma.pago.findFirst({
-    select: { anio: true },
-    orderBy: { anio: "asc" },
-  });
-  const anioActual = new Date().getFullYear();
-  return Math.min(primero?.anio ?? anioActual, anioActual);
+  return (await getResumenAnios()).anioInicio;
 }
 
-/** Estado de cada mes (1-12) de un año: PAGO, NULO o ausente si está impago. */
-export function estadosDelAnio(pagos: RegistroCuota[], anio: number) {
-  return new Map(pagos.filter((p) => p.anio === anio).map((p) => [p.mes, p.estado]));
+/** Estado de cada mes de un año como array de 12 (índice 0 = enero): PAGO, NULO o null si está impago. */
+export function estadosDelAnio(pagos: RegistroCuota[], anio: number): (EstadoCuota | null)[] {
+  const estados: (EstadoCuota | null)[] = Array(12).fill(null);
+  for (const p of pagos) if (p.anio === anio) estados[p.mes - 1] = p.estado;
+  return estados;
 }
 
 /** Último mes que ya debería estar pago para el año dado (0 si el año es futuro). */
@@ -120,6 +127,27 @@ export function calcularDeuda(
     }
   }
   return deuda;
+}
+
+export type AltasBajasPorMes = { altas: number[]; bajas: number[] };
+
+/** Cantidad de altas y bajas por mes (índice 0 = enero) según las fechas cargadas en cada ficha. */
+export async function getAltasBajasPorMes(anio: number): Promise<AltasBajasPorMes> {
+  const desde = new Date(Date.UTC(anio, 0, 1));
+  const hasta = new Date(Date.UTC(anio + 1, 0, 1));
+  const socios = await prisma.socio.findMany({
+    where: {
+      OR: [{ fechaAlta: { gte: desde, lt: hasta } }, { fechaBaja: { gte: desde, lt: hasta } }],
+    },
+    select: { fechaAlta: true, fechaBaja: true },
+  });
+  const altas = Array<number>(12).fill(0);
+  const bajas = Array<number>(12).fill(0);
+  for (const s of socios) {
+    if (s.fechaAlta && s.fechaAlta.getUTCFullYear() === anio) altas[s.fechaAlta.getUTCMonth()]++;
+    if (s.fechaBaja && s.fechaBaja.getUTCFullYear() === anio) bajas[s.fechaBaja.getUTCMonth()]++;
+  }
+  return { altas, bajas };
 }
 
 export function nombreCompleto(s: { nombre: string; apellido: string }) {

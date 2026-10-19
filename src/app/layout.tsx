@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import Link from "next/link";
 import { NavEscritorio, NavMovil } from "@/components/NavLinks";
 import { LogoutButton } from "@/components/LogoutButton";
+import { IconosSprite } from "@/components/IconosSprite";
 import { getSesion } from "@/lib/auth";
 import Image from "next/image";
 import { NOMBRE_PENA } from "@/lib/constants";
@@ -38,6 +39,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">
+        <IconosSprite />
         {!sesion ? (
           <main className="mx-auto w-full max-w-[96rem] flex-1 px-3 py-6 sm:px-4">{children}</main>
         ) : (

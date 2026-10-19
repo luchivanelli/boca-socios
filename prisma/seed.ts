@@ -16,19 +16,20 @@ async function main() {
   const anio = new Date().getFullYear();
   const mesActual = new Date().getMonth() + 1;
   const hasta = (n: number) => Array.from({ length: n }, (_, i) => ({ anio, mes: i + 1 }));
+  const alta = new Date(Date.UTC(anio, 0, 1)); // todos dados de alta en enero del año en curso
 
   await prisma.socio.create({
     data: {
       nombre: "Juan Román", apellido: "Riquelme", nroSocio: 10, dni: "26123456",
       localidad: "Don Torcuato", direccion: "Brandsen 805", telefono: "11 2345 6789",
-      estado: "ACTIVO", carnet: true, metodoPago: "DEBITO_AUTOMATICO",
+      estado: "ACTIVO", carnet: true, metodoPago: "DEBITO_AUTOMATICO", fechaAlta: alta,
     },
   });
   await prisma.socio.create({
     data: {
       nombre: "Martín", apellido: "Palermo", nroSocio: 9, dni: "23456789",
       localidad: "La Plata", telefono: "221 456 7890",
-      estado: "ACTIVO", carnet: true, metodoPago: "TRANSFERENCIA",
+      estado: "ACTIVO", carnet: true, metodoPago: "TRANSFERENCIA", fechaAlta: alta,
       pagos: { create: hasta(Math.max(0, mesActual - 3)) },
     },
   });
@@ -36,20 +37,20 @@ async function main() {
     data: {
       nombre: "Carlos", apellido: "Tevez", nroSocio: 32, dni: "30111222",
       localidad: "Ejército de los Andes", telefono: "11 6789 1234",
-      estado: "ACTIVO", carnet: false, metodoPago: "COBRADOR",
+      estado: "ACTIVO", carnet: false, metodoPago: "COBRADOR", fechaAlta: alta,
       pagos: { create: hasta(Math.max(0, mesActual - 1)) },
     },
   });
   await prisma.socio.create({
     data: {
       nombre: "Sebastián", apellido: "Battaglia", nroSocio: 5, dni: "27999888",
-      localidad: "Santa Fe", estado: "ACTIVO", carnet: false, metodoPago: "COBRADOR",
+      localidad: "Santa Fe", estado: "ACTIVO", carnet: false, metodoPago: "COBRADOR", fechaAlta: alta,
     },
   });
   await prisma.socio.create({
     data: {
       nombre: "Diego", apellido: "Maradona", nroSocio: 1, dni: "14276579",
-      localidad: "Villa Fiorito", estado: "INACTIVO", carnet: true, metodoPago: "TRANSFERENCIA",
+      localidad: "Villa Fiorito", estado: "INACTIVO", carnet: true, metodoPago: "TRANSFERENCIA", fechaAlta: alta,
     },
   });
 

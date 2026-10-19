@@ -78,11 +78,16 @@ sin marcar (ni pagados ni nulos) desde enero del primer año con cuotas registra
 hasta el mes actual. Ej.: en febrero 2027, si no pagó noviembre ni diciembre 2026 ni enero 2027,
 debe 3 cuotas. Los socios inactivos no cuentan como deudores.
 
-Cada socio puede tener una **fecha de alta** (mes/año) opcional; si no se marca la casilla queda
-indefinida. Al crear o editar un socio con fecha de alta,
-la casilla "Anular meses anteriores a la fecha de alta" marca como **nulas** todas las cuotas previas
-al ingreso que todavía no tengan registro, así no le figuran como deuda. No modifica las ya pagadas.
-También se puede anular o desanular cualquier mes a mano tocándolo en la grilla.
+Cada socio tiene una **fecha de alta** obligatoria (mes/año, por defecto el mes actual). Al crear o
+guardar un socio, todas las cuotas anteriores a ese mes que no tengan registro pasan a **nulas**
+automáticamente, así no le figuran como deuda. No se modifican las ya pagadas ni las nulas que ya existan.
+Cualquier mes se puede anular o desanular a mano tocándolo en la grilla.
+
+Los socios cargados antes de empezar a usar la app pueden quedar con el mes de carga como fecha de alta:
+no importa la fecha exacta, solo sirve para que no se les cuenten cuotas previas.
+
+Al pasar un socio a **Inactivo** se pide el mes de baja. Con las fechas de alta y de baja, el listado
+muestra arriba un recuento mensual de altas y bajas del año seleccionado.
 
 Los socios con **débito automático** no tienen casillas de meses: la cuota se les descuenta
 todos los meses, así que no se marcan pagos a mano y nunca figuran como deudores.
@@ -107,6 +112,19 @@ vertical 9:16 para grabar la pantalla y subirla a Instagram: los nombres giran, 
 revelan a cada ganador con confeti; al final queda la lista completa. Los ganadores se eligen
 con el generador aleatorio del navegador antes de empezar y un socio no puede salir dos veces.
 El resultado no se guarda en la base.
+
+## Rendimiento
+
+- Cada ruta tiene un `loading.tsx`: el encabezado y un esqueleto llegan al instante mientras
+  se consultan los datos (el primer byte tarda ~10 ms en lugar de esperar a la base).
+- `experimental.staleTimes.dynamic = 30`: el router reutiliza por 30 s las páginas visitadas al
+  navegar; las server actions invalidan esa caché con `revalidatePath`.
+- `src/instrumentation.ts` abre la conexión a la base al arrancar el servidor.
+- El listado renderiza una sola vista según el dispositivo (tarjetas en celular, tabla en el
+  resto) y las 12 casillas de cada socio son un único componente cliente con estilos en CSS
+  (`.cuota`) e íconos de un sprite compartido: ~9 KB por socio en vez de ~37 KB.
+- El tiempo total de cada página depende de la latencia a Neon (región `sa-east-1`). Desplegar
+  la app en esa misma región (por ejemplo Vercel en `gru1`) lo reduce de ~150 ms a ~30 ms.
 
 ## Celular
 

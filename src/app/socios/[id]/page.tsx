@@ -6,19 +6,17 @@ import { actualizarSocio } from "@/actions/socios";
 import { DeudaBadge, EstadoBadge } from "@/components/Badges";
 import { LeyendaCuotas } from "@/components/LeyendaCuotas";
 import { EliminarSocioButton } from "@/components/EliminarSocioButton";
-import { PagoToggle } from "@/components/PagoToggle";
+import { CuotasSocio } from "@/components/CuotasSocio";
 import { SelectorAnio } from "@/components/SelectorAnio";
 import { SocioForm } from "@/components/SocioForm";
 import { WhatsAppButton } from "@/components/WhatsAppButton";
-import { MESES_LARGO } from "@/lib/constants";
 import { describirCuotas, formatearMes } from "@/lib/cuotas";
 import { leerAnio, type SearchParams } from "@/lib/params";
 import {
   calcularDeuda,
   esDebitoAutomatico,
   estadosDelAnio,
-  getAnioInicio,
-  getAniosDisponibles,
+  getResumenAnios,
   getSocio,
   ultimoMesExigible,
 } from "@/lib/socios";
@@ -38,11 +36,7 @@ export default async function SocioPage({
   if (!Number.isInteger(id)) notFound();
 
   const anio = leerAnio(sp);
-  const [socio, anios, anioInicio] = await Promise.all([
-    getSocio(id),
-    getAniosDisponibles(),
-    getAnioInicio(),
-  ]);
+  const [socio, { anios, anioInicio }] = await Promise.all([getSocio(id), getResumenAnios()]);
   if (!socio) notFound();
 
   const hoy = new Date();
@@ -71,8 +65,9 @@ export default async function SocioPage({
             <span className="font-mono">Socio Nº {socio.nroSocio}</span>
             <span className="font-mono">DNI {socio.dni}</span>
             <span className="font-mono">
-              Alta {socio.fechaAlta ? formatearMes(socio.fechaAlta) : "sin definir"}
+              Alta {formatearMes(socio.fechaAlta)}
             </span>
+            {socio.fechaBaja && <span className="font-mono">Baja {formatearMes(socio.fechaBaja)}</span>}
             <EstadoBadge estado={socio.estado} />
             <DeudaBadge cantidad={deuda.length} inactivo={inactivo} debito={debito} />
           </p>
@@ -114,19 +109,13 @@ export default async function SocioPage({
                 <SelectorAnio anios={anios} anio={anio} />
               </Suspense>
             </div>
-            <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 md:grid-cols-6">
-              {MESES_LARGO.map((_, i) => (
-                <PagoToggle
-                  key={i}
-                  socioId={socio.id}
-                  anio={anio}
-                  mes={i + 1}
-                  estado={estados.get(i + 1) ?? null}
-                  futuro={i + 1 > mesExigible}
-                  grande
-                />
-              ))}
-            </div>
+            <CuotasSocio
+              socioId={socio.id}
+              anio={anio}
+              estados={estados}
+              mesExigible={mesExigible}
+              modo="grande"
+            />
             <div className="mt-3">
               <LeyendaCuotas />
             </div>

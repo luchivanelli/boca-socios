@@ -49,12 +49,12 @@ button, a {
  * (que se dispara con fuentes menores) y mantiene el mismo tamaño en escritorio.
  * El line-height ajustado los mantiene compactos.
  */
-input,
+/* input,
 select,
 textarea {
   font-size: 16px;
   line-height: 1.25;
-}
+} */
 
 /* Animaciones del sorteo */
 @keyframes revelar {
@@ -91,3 +91,89 @@ textarea {
   animation-timing-function: linear;
   animation-fill-mode: both;
 }
+
+/*
+ * Casillas de cuota (.cuota). Van en CSS y no en clases utilitarias porque hay una por mes
+ * y por socio: con cientos de socios, cada byte de clase repetida pesa en el HTML.
+ */
+.cuota {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #cbd5e1;
+  background: #fff;
+  color: #334155;
+  font-weight: 700;
+  font-size: 0.875rem;
+  border-radius: 0.25rem;
+  transition:
+    background-color 0.15s,
+    border-color 0.15s;
+  touch-action: manipulation;
+  user-select: none;
+}
+.cuota:disabled {
+  opacity: 0.6;
+}
+.cuota:hover {
+  border-color: var(--color-boca-azul);
+}
+.cuota:active {
+  background: var(--color-boca-amarillo-suave);
+}
+.cuota[data-futuro] {
+  background: #f8fafc;
+  color: #64748b;
+  border-style: dashed;
+  border-color: #e2e8f0;
+}
+.cuota[data-estado="PAGO"] {
+  background: var(--color-boca-amarillo);
+  color: var(--color-boca-azul);
+  border-style: solid;
+  border-color: var(--color-boca-amarillo-oscuro);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+.cuota[data-estado="NULO"] {
+  background: #e2e8f0;
+  color: #64748b;
+  border-style: solid;
+  border-color: #cbd5e1;
+  text-decoration: line-through;
+  text-decoration-color: #94a3b8;
+}
+.cuota-chica {
+  height: 2rem;
+  width: 100%;
+}
+@media (min-width: 768px) {
+  .cuota-chica {
+    height: 1.75rem;
+    width: 1.75rem;
+  }
+}
+.cuota-grande {
+  height: 3rem;
+  width: 100%;
+  gap: 0.375rem;
+  border-radius: 0.5rem;
+}
+@media (min-width: 640px) {
+  .cuota-grande {
+    font-size: 1rem;
+  }
+}
+
+/* Tabla de socios de escritorio: padding, bordes y hover definidos una vez para todas las celdas. */
+.tabla-socios td {
+  padding: 0.375rem 0.5rem;
+  border-bottom: 1px solid #f1f5f9;
+}
+.tabla-socios td.mes {
+  padding: 0.375rem 0.125rem;
+  text-align: center;
+}
+.tabla-socios tbody tr:hover td {
+  background: #fffbe3;
+}
+

@@ -27,7 +27,8 @@ type DatosSocio = {
   estado: Estado;
   carnet: boolean;
   metodoPago: MetodoPago;
-  fechaAlta: Date | null;
+  fechaAlta: Date;
+  fechaBaja: Date | null;
   observaciones: string | null;
 };
 
@@ -68,11 +69,14 @@ function validar(formData: FormData): { datos?: DatosSocio; errores: Record<stri
     errores.telefono = "El teléfono parece incompleto.";
   }
 
-  const conFechaAlta = formData.get("conFechaAlta") === "on";
-  const fechaAlta = conFechaAlta ? parsearMes(texto(formData, "fechaAlta")) : null;
-  if (conFechaAlta && !fechaAlta) errores.fechaAlta = "Ingresá el mes de alta como mm/aaaa.";
+  const fechaAlta = parsearMes(texto(formData, "fechaAlta"));
+  if (!fechaAlta) errores.fechaAlta = "Ingresá el mes de alta como mm/aaaa.";
 
-  if (Object.keys(errores).length > 0) return { errores };
+  // La fecha de baja solo existe para inactivos; al reactivar se borra.
+  const fechaBaja = estado === "INACTIVO" ? parsearMes(texto(formData, "fechaBaja")) : null;
+  if (estado === "INACTIVO" && !fechaBaja) errores.fechaBaja = "Ingresá el mes de baja como mm/aaaa.";
+
+  if (Object.keys(errores).length > 0 || !fechaAlta) return { errores };
 
   return {
     errores,
@@ -88,6 +92,7 @@ function validar(formData: FormData): { datos?: DatosSocio; errores: Record<stri
       carnet,
       metodoPago,
       fechaAlta,
+      fechaBaja,
       observaciones: observaciones || null,
     },
   };
@@ -141,9 +146,8 @@ export async function crearSocio(_prev: FormState, formData: FormData): Promise<
     return errorDeUnicidad(e) ?? { error: "No se pudo crear el socio. Intentá de nuevo." };
   }
 
-  if (datos.fechaAlta && formData.get("anularAnteriores") === "on") {
-    await anularMesesAnteriores(nuevoId, datos.fechaAlta);
-  }
+  // Las cuotas anteriores al mes de alta no corresponden: quedan nulas automáticamente.
+  await anularMesesAnteriores(nuevoId, datos.fechaAlta);
 
   revalidatePath("/");
   revalidatePath("/deudores");
@@ -164,10 +168,8 @@ export async function actualizarSocio(
     return errorDeUnicidad(e) ?? { error: "No se pudo guardar. Intentá de nuevo." };
   }
 
-  let anuladas = 0;
-  if (datos.fechaAlta && formData.get("anularAnteriores") === "on") {
-    anuladas = await anularMesesAnteriores(id, datos.fechaAlta);
-  }
+  // Idempotente: solo agrega nulos en meses sin registro, no pisa pagos ni nulos existentes.
+  const anuladas = await anularMesesAnteriores(id, datos.fechaAlta);
 
   revalidatePath("/");
   revalidatePath("/deudores");

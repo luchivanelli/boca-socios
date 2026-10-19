@@ -18,6 +18,10 @@ type Props = {
 
 type Fase = "girando" | "ganador" | "final";
 
+const MENSAJE_AGRADECIMIENTO =
+  "Agradecemos a todos los socios por cumplir mes a mes con el pago de su cuota. " +
+  "Su apoyo constante hace posible que sigamos creciendo y construyendo juntos un futuro mejor para nuestra institución.";
+
 const DURACION_GIRO_MS = 4200;
 const PAUSA_GANADOR_MS = 4500;
 
@@ -320,8 +324,12 @@ function Escenario({ titulo, participantes, ganadores, mostrarNro, onRepetir, on
               )}
             </div>
             {fase === "ganador" && <Confeti semilla={indice} />}
-            {fase === "ganador" && (
+            {fase === "ganador" ? (
               <p className="text-lg font-bold text-boca-amarillo">¡Felicitaciones! 🎉</p>
+            ) : (
+              <p className="animate-revelar max-w-xs text-balance text-sm leading-relaxed text-white/85 sm:text-base">
+                {MENSAJE_AGRADECIMIENTO}
+              </p>
             )}
           </div>
         )}

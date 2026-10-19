@@ -4,8 +4,9 @@ import { useActionState } from "react";
 import { Save } from "lucide-react";
 import type { Socio } from "@prisma/client";
 import type { FormState } from "@/actions/socios";
-import { ESTADO_LABEL, ESTADOS, METODO_PAGO_LABEL, METODOS_PAGO } from "@/lib/constants";
-import { CamposFechaAlta } from "./CamposFechaAlta";
+import { METODO_PAGO_LABEL, METODOS_PAGO } from "@/lib/constants";
+import { mesISO } from "@/lib/cuotas";
+import { CampoEstado } from "./CampoEstado";
 
 type Props = {
   action: (prev: FormState, formData: FormData) => Promise<FormState>;
@@ -111,15 +112,13 @@ export function SocioForm({ action, socio, textoBoton }: Props) {
             ))}
           </select>
         </Campo>
-        <Campo label="Alta" name="estado" error={errores.estado}>
-          <select name="estado" defaultValue={socio?.estado ?? "ACTIVO"} className={inputClase}>
-            {ESTADOS.map((e) => (
-              <option key={e} value={e}>
-                {ESTADO_LABEL[e]}
-              </option>
-            ))}
-          </select>
-        </Campo>
+        <CampoEstado
+          estado={socio?.estado}
+          fechaBaja={socio?.fechaBaja}
+          errorEstado={errores.estado}
+          errorFechaBaja={errores.fechaBaja}
+          inputClase={inputClase}
+        />
         <div className="flex items-end">
           <label className="flex cursor-pointer items-center gap-2 text-sm font-medium text-slate-700">
             <input
@@ -131,12 +130,22 @@ export function SocioForm({ action, socio, textoBoton }: Props) {
             Tiene carnet
           </label>
         </div>
-        <CamposFechaAlta
-          fechaAlta={socio?.fechaAlta}
-          esNuevo={!socio}
+        <Campo
+          label="Fecha de alta (mes/año)"
+          name="fechaAlta"
           error={errores.fechaAlta}
-          inputClase={inputClase}
-        />
+          ayuda="Las cuotas anteriores a este mes se anulan solas y no cuentan como deuda."
+        >
+          <input
+            id="fechaAlta"
+            name="fechaAlta"
+            type="month"
+            defaultValue={mesISO(socio?.fechaAlta ?? new Date())}
+            placeholder="mm/aaaa"
+            required
+            className={inputClase}
+          />
+        </Campo>
       </div>
 
       <Campo label="Observaciones (opcional)" name="observaciones" error={errores.observaciones}>

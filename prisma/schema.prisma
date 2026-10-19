@@ -31,8 +31,10 @@ model Socio {
   estado        Estado     @default(ACTIVO)
   carnet        Boolean    @default(false)
   metodoPago    MetodoPago @default(TRANSFERENCIA)
-  /// Mes de ingreso a la peña (siempre día 1), o null si no se conoce. Sirve para anular cuotas anteriores.
-  fechaAlta     DateTime?  @db.Date
+  /// Mes de ingreso a la peña (siempre día 1). Las cuotas anteriores se anulan solas.
+  fechaAlta     DateTime   @db.Date
+  /// Mes en que pasó a inactivo (día 1), o null si está activo.
+  fechaBaja     DateTime?  @db.Date
   /// Notas libres de la comisión (opcional).
   observaciones String?
   pagos         Pago[]

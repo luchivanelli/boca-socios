@@ -1,10 +1,12 @@
 import Link from "next/link";
+import { headers } from "next/headers";
+import { userAgent } from "next/server";
 import { Suspense } from "react";
 import { Search, UserPlus } from "lucide-react";
 import { DeudaBadge, EstadoBadge, MetodoPagoBadge } from "@/components/Badges";
-import { GrillaMeses } from "@/components/GrillaMeses";
-import { PagoToggle } from "@/components/PagoToggle";
+import { CuotasSocio } from "@/components/CuotasSocio";
 import { LeyendaCuotas } from "@/components/LeyendaCuotas";
+import { AltasBajas } from "@/components/AltasBajas";
 import { ExportarPdf } from "@/components/ExportarPdf";
 import { PanelFiltros } from "@/components/PanelFiltros";
 import { SelectAuto } from "@/components/SelectAuto";
@@ -14,13 +16,16 @@ import { ESTADO_LABEL, ESTADOS, MESES, METODO_PAGO_LABEL, METODOS_PAGO } from "@
 import { etiquetaCuota, formatearMes } from "@/lib/cuotas";
 import type { SocioExportable } from "@/lib/exportar";
 import {
+  FILTROS_CUOTAS,
   leerAnio,
+  leerCuotas,
   leerEstado,
   leerMetodoPago,
   leerOrden,
   leerTexto,
   ORDEN_POR_DEFECTO,
   ORDENES,
+  type FiltroCuotas,
   type Orden,
   type SearchParams,
 } from "@/lib/params";
@@ -28,8 +33,8 @@ import {
   calcularDeuda,
   esDebitoAutomatico,
   estadosDelAnio,
-  getAnioInicio,
-  getAniosDisponibles,
+  getAltasBajasPorMes,
+  getResumenAnios,
   getSocios,
   ultimoMesExigible,
 } from "@/lib/socios";
@@ -41,27 +46,38 @@ export default async function SociosPage({
 }: {
   searchParams: Promise<SearchParams>;
 }) {
-  const sp = await searchParams;
+  const [sp, cabeceras] = await Promise.all([searchParams, headers()]);
+  // Se renderiza una sola vista según el dispositivo: mandar tarjetas y tabla a la vez
+  // duplicaba el HTML (12 casillas por socio en cada una).
+  const vista = userAgent({ headers: cabeceras }).device.type === "mobile" ? "tarjetas" : "tabla";
   const anio = leerAnio(sp);
   const q = leerTexto(sp, "q");
   const estado = leerEstado(sp);
   const metodoPago = leerMetodoPago(sp);
   const orden = leerOrden(sp);
+  const cuotas = leerCuotas(sp);
 
-  const [socios, anios, anioInicio] = await Promise.all([
+  const [socios, { anios, anioInicio }, altasBajas] = await Promise.all([
     getSocios({ q, estado, metodoPago, orden }),
-    getAniosDisponibles(),
-    getAnioInicio(),
+    getResumenAnios(),
+    getAltasBajasPorMes(anio),
   ]);
 
   const mesExigible = ultimoMesExigible(anio);
-  const filas = socios.map((socio) => ({
-    socio,
-    estados: estadosDelAnio(socio.pagos, anio),
-    deuda: calcularDeuda(socio, anioInicio),
-    debito: esDebitoAutomatico(socio),
-    inactivo: socio.estado === "INACTIVO",
-  }));
+  const filas = socios
+    .map((socio) => ({
+      socio,
+      estados: estadosDelAnio(socio.pagos, anio),
+      deuda: calcularDeuda(socio, anioInicio),
+      debito: esDebitoAutomatico(socio),
+      inactivo: socio.estado === "INACTIVO",
+    }))
+    // La deuda se calcula en memoria, por eso este filtro va después de la consulta.
+    .filter((f) => {
+      if (cuotas === "deudores") return f.deuda.length > 0;
+      if (cuotas === "al-dia") return !f.inactivo && f.deuda.length === 0;
+      return true;
+    });
   const anioActual = new Date().getFullYear();
   const exportables: SocioExportable[] = filas.map(({ socio, deuda, debito, inactivo }) => ({
     nroSocio: socio.nroSocio,
@@ -74,7 +90,7 @@ export default async function SociosPage({
     estado: ESTADO_LABEL[socio.estado],
     carnet: socio.carnet ? "Sí" : "No",
     metodoPago: METODO_PAGO_LABEL[socio.metodoPago],
-    fechaAlta: socio.fechaAlta ? formatearMes(socio.fechaAlta) : "",
+    fechaAlta: formatearMes(socio.fechaAlta),
     observaciones: socio.observaciones ?? "",
     deudaCantidad: deuda.length,
     deudaDetalle: deuda.map((c) => etiquetaCuota(c, anioActual)).join(", "),
@@ -83,7 +99,7 @@ export default async function SociosPage({
   }));
   const activos = filas.filter((f) => !f.inactivo).length;
   const deudores = filas.filter((f) => f.deuda.length > 0).length;
-  const filtrosActivos = [q, estado, metodoPago, orden !== ORDEN_POR_DEFECTO].filter(Boolean).length;
+  const filtrosActivos = [q, estado, metodoPago, cuotas, orden !== ORDEN_POR_DEFECTO].filter(Boolean).length;
   const hayFiltros = filtrosActivos > 0;
 
   return (
@@ -119,10 +135,12 @@ export default async function SociosPage({
         <Resumen titulo="Con deuda" valor={deudores} resaltar={deudores > 0} />
       </div>
 
+      <AltasBajas anio={anio} datos={altasBajas} />
+
       {/* En celular el bloque es sticky; el envoltorio con el color de fondo deja un margen
           para que las tarjetas no se peguen al borde al pasar por debajo. */}
       <div className="sticky top-[70px] z-10 -mx-3 bg-[#f3f5fa] px-3 pb-4 sm:static sm:mx-0 sm:bg-transparent sm:px-0 sm:pb-0">
-      <form className="grid gap-1.5 rounded-lg border border-slate-200 bg-white p-2.5 shadow-sm sm:gap-2 sm:p-3 sm:grid-cols-[1fr_auto] lg:grid-cols-[1fr_auto_auto_auto_auto] sm:items-end">
+      <form className="grid gap-1.5 rounded-lg border border-slate-200 bg-white p-2.5 shadow-sm sm:gap-2 sm:p-3 sm:grid-cols-[1fr_auto] lg:grid-cols-[1fr_auto_auto_auto_auto_auto] sm:items-end">
         <input type="hidden" name="anio" value={anio} />
         <div>
           <label htmlFor="q" className="mb-1 block text-xs font-medium text-slate-600">
@@ -175,7 +193,20 @@ export default async function SociosPage({
                 ))}
               </SelectAuto>
             </div>
-            <div className="col-span-2 sm:col-span-1">
+            <div>
+              <label htmlFor="cuotas" className="mb-1 block text-xs font-medium text-slate-600">
+                Cuotas
+              </label>
+              <SelectAuto id="cuotas" name="cuotas" defaultValue={cuotas ?? ""} className={selectClase}>
+                <option value="">Todos</option>
+                {(Object.keys(FILTROS_CUOTAS) as FiltroCuotas[]).map((c) => (
+                  <option key={c} value={c}>
+                    {FILTROS_CUOTAS[c]}
+                  </option>
+                ))}
+              </SelectAuto>
+            </div>
+            <div>
               <label htmlFor="orden" className="mb-1 block text-xs font-medium text-slate-600">
                 Ordenar por
               </label>
@@ -209,8 +240,8 @@ export default async function SociosPage({
       )}
 
       {/* Celular: tarjetas */}
-      {filas.length > 0 && (
-        <ul className="space-y-2 md:hidden">
+      {filas.length > 0 && vista === "tarjetas" && (
+        <ul className="space-y-2">
           {filas.map(({ socio, estados, deuda, debito, inactivo }) => (
             <li
               key={socio.id}
@@ -239,11 +270,12 @@ export default async function SociosPage({
                     Débito automático: la cuota se descuenta todos los meses, no se marcan pagos.
                   </p>
                 ) : (
-                  <GrillaMeses
+                  <CuotasSocio
                     socioId={socio.id}
                     anio={anio}
                     estados={estados}
                     mesExigible={mesExigible}
+                    modo="grilla"
                   />
                 )}
               </div>
@@ -253,9 +285,9 @@ export default async function SociosPage({
       )}
 
       {/* Escritorio: tabla */}
-      {filas.length > 0 && (
-        <div className="hidden max-h-[70vh] overflow-auto rounded-lg border border-slate-200 bg-white shadow-sm md:block">
-          <table className="w-full border-separate border-spacing-0 text-sm">
+      {filas.length > 0 && vista === "tabla" && (
+        <div className="max-h-[70vh] overflow-auto rounded-lg border border-slate-200 bg-white shadow-sm">
+          <table className="tabla-socios w-full border-separate border-spacing-0 text-sm">
             <thead className="sticky top-0 z-20 bg-boca-azul text-left text-xs uppercase tracking-wide text-white">
               <tr>
                 <th className="sticky left-0 z-30 w-14 min-w-14 bg-boca-azul px-2 py-2">Nº</th>
@@ -275,16 +307,16 @@ export default async function SociosPage({
                 <th className="px-2 py-2">Deuda</th>
               </tr>
             </thead>
-            <tbody className="[&>tr>td]:border-b [&>tr>td]:border-slate-100">
+            <tbody>
               {filas.map(({ socio, estados, deuda, debito, inactivo }) => (
                 <tr
                   key={socio.id}
-                  className={`group ${inactivo ? "text-slate-400" : ""}`}
+                  className={inactivo ? "text-slate-400" : undefined}
                 >
-                  <td className="sticky left-0 z-10 w-14 min-w-14 bg-white px-2 py-1.5 font-mono text-xs group-hover:bg-[#fffbe3]">
+                  <td className="sticky left-0 z-10 w-14 min-w-14 bg-white font-mono text-xs">
                     {socio.nroSocio}
                   </td>
-                  <td className="sticky left-14 z-10 bg-white px-2 py-1.5 whitespace-nowrap shadow-[4px_0_6px_-4px_rgba(0,0,0,0.15)] group-hover:bg-[#fffbe3]">
+                  <td className="sticky left-14 z-10 bg-white whitespace-nowrap shadow-[4px_0_6px_-4px_rgba(0,0,0,0.15)]">
                     <Link
                       href={`/socios/${socio.id}?anio=${anio}`}
                       className="font-semibold text-boca-azul hover:underline"
@@ -295,32 +327,28 @@ export default async function SociosPage({
                       <span className="block text-xs text-slate-500">{socio.telefono}</span>
                     )}
                   </td>
-                  <td className="group-hover:bg-[#fffbe3] px-2 py-1.5 font-mono text-xs">{socio.dni}</td>
-                  <td className="group-hover:bg-[#fffbe3] px-2 py-1.5 text-xs">{socio.localidad}</td>
-                  <td className="group-hover:bg-[#fffbe3] px-2 py-1.5">
+                  <td className="font-mono text-xs">{socio.dni}</td>
+                  <td className="text-xs">{socio.localidad}</td>
+                  <td>
                     <EstadoBadge estado={socio.estado} />
                   </td>
-                  <td className="group-hover:bg-[#fffbe3] px-2 py-1.5 whitespace-nowrap">
+                  <td className="whitespace-nowrap">
                     <MetodoPagoBadge metodo={socio.metodoPago} />
                   </td>
                   {debito ? (
-                    <td colSpan={12} className="group-hover:bg-[#fffbe3] px-2 py-1.5 text-center text-xs text-boca-azul/70">
+                    <td colSpan={12} className="text-center text-xs text-boca-azul/70">
                       Se descuenta todos los meses por débito automático
                     </td>
                   ) : (
-                    MESES.map((_, i) => (
-                      <td key={i} className="group-hover:bg-[#fffbe3] px-0.5 py-1.5 text-center">
-                        <PagoToggle
-                          socioId={socio.id}
-                          anio={anio}
-                          mes={i + 1}
-                          estado={estados.get(i + 1) ?? null}
-                          futuro={i + 1 > mesExigible}
-                        />
-                      </td>
-                    ))
+                    <CuotasSocio
+                      socioId={socio.id}
+                      anio={anio}
+                      estados={estados}
+                      mesExigible={mesExigible}
+                      modo="celdas"
+                    />
                   )}
-                  <td className="group-hover:bg-[#fffbe3] px-2 py-1.5 whitespace-nowrap">
+                  <td className="whitespace-nowrap">
                     <DeudaBadge cantidad={deuda.length} inactivo={inactivo} debito={debito} />
                   </td>
                 </tr>
@@ -334,4 +362,4 @@ export default async function SociosPage({
 }
 
 const selectClase =
-  "w-full rounded-md border border-slate-300 bg-white px-2 py-1.5 focus:border-boca-azul focus:outline-none focus:ring-2 focus:ring-boca-amarillo";
+  "w-full text-sm sm:text-base rounded-md border border-slate-300 bg-white px-2 py-1.5 focus:border-boca-azul focus:outline-none focus:ring-2 focus:ring-boca-amarillo";
