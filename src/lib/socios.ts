@@ -1,56 +1,11 @@
-import type { Estado, EstadoCuota, MetodoPago, Prisma } from "@prisma/client";
-import { ORDEN_POR_DEFECTO, type Orden } from "./params";
+import type { Estado, EstadoCuota, MetodoPago } from "@prisma/client";
 import { prisma } from "./prisma";
 
 /** Solo lo que hace falta de cada cuota: evita traer id, socioId y fecha en cada fila. */
 const PAGO_CAMPOS = { anio: true, mes: true, estado: true } as const;
 
-export type SocioConPagos = Prisma.SocioGetPayload<{ include: { pagos: { select: typeof PAGO_CAMPOS } } }>;
 export type Cuota = { anio: number; mes: number };
 type RegistroCuota = { anio: number; mes: number; estado: EstadoCuota };
-
-export type FiltrosSocios = {
-  q?: string;
-  estado?: Estado;
-  metodoPago?: MetodoPago;
-  orden?: Orden;
-};
-
-const ORDEN_PRISMA: Record<Orden, Prisma.SocioOrderByWithRelationInput[]> = {
-  "apellido-asc": [{ apellido: "asc" }, { nombre: "asc" }],
-  "apellido-desc": [{ apellido: "desc" }, { nombre: "desc" }],
-  "nroSocio-asc": [{ nroSocio: "asc" }],
-  "nroSocio-desc": [{ nroSocio: "desc" }],
-};
-
-/** Lista de socios con todos sus registros de cuotas (hacen falta para la deuda acumulada). */
-export async function getSocios({
-  q,
-  estado,
-  metodoPago,
-  orden = ORDEN_POR_DEFECTO,
-}: FiltrosSocios) {
-  const where: Prisma.SocioWhereInput = {};
-  if (estado) where.estado = estado;
-  if (metodoPago) where.metodoPago = metodoPago;
-  if (q && q.trim()) {
-    const texto = q.trim();
-    const numero = Number(texto);
-    where.OR = [
-      { nombre: { contains: texto, mode: "insensitive" } },
-      { apellido: { contains: texto, mode: "insensitive" } },
-      { dni: { contains: texto } },
-      { localidad: { contains: texto, mode: "insensitive" } },
-      ...(Number.isInteger(numero) ? [{ nroSocio: numero }] : []),
-    ];
-  }
-
-  return prisma.socio.findMany({
-    where,
-    include: { pagos: { select: PAGO_CAMPOS } },
-    orderBy: ORDEN_PRISMA[orden],
-  });
-}
 
 export async function getSocio(id: number) {
   return prisma.socio.findUnique({
@@ -59,7 +14,6 @@ export async function getSocio(id: number) {
   });
 }
 
-/** Años con cuotas registradas, más el actual, para el selector de año. */
 /**
  * Años con cuotas registradas (GROUP BY en la base, no trae todas las filas).
  * Devuelve la lista para el selector (descendente, con el año actual) y el primer año
@@ -72,10 +26,6 @@ export async function getResumenAnios() {
   anios.add(anioActual);
   const lista = [...anios].sort((a, b) => b - a);
   return { anios: lista, anioInicio: Math.min(lista[lista.length - 1], anioActual) };
-}
-
-export async function getAniosDisponibles() {
-  return (await getResumenAnios()).anios;
 }
 
 /**
@@ -150,6 +100,3 @@ export async function getAltasBajasPorMes(anio: number): Promise<AltasBajasPorMe
   return { altas, bajas };
 }
 
-export function nombreCompleto(s: { nombre: string; apellido: string }) {
-  return `${s.apellido}, ${s.nombre}`;
-}

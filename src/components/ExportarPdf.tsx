@@ -3,32 +3,34 @@
 import { useRef, useState } from "react";
 import { FileDown, X } from "lucide-react";
 import { NOMBRE_PENA } from "@/lib/constants";
+import { exportarSocios } from "@/actions/socios";
 import {
   COLUMNAS_EXPORTACION,
   COLUMNAS_POR_DEFECTO,
-  filtrarPorTipo,
   TIPOS_EXPORTACION,
   valorColumna,
   type ClaveColumna,
+  type FiltrosExportacion,
   type SocioExportable,
   type TipoExportacion,
 } from "@/lib/exportar";
 
 type Props = {
-  /** Socios del listado actual (ya con búsqueda y filtros aplicados). */
-  filas: SocioExportable[];
-  /** Descripción del filtro activo, para avisar que el PDF lo respeta. */
+  /** Búsqueda y filtros aplicados en el listado: el PDF los respeta. */
+  filtros: FiltrosExportacion;
+  /** Cuántos socios hay de cada tipo con esos filtros, para mostrarlo antes de descargar. */
+  conteos: Record<TipoExportacion, number>;
   hayFiltros: boolean;
 };
 
-export function ExportarPdf({ filas, hayFiltros }: Props) {
+export function ExportarPdf({ filtros, conteos, hayFiltros }: Props) {
   const dialogo = useRef<HTMLDialogElement>(null);
   const [tipo, setTipo] = useState<TipoExportacion>("todos");
   const [columnas, setColumnas] = useState<ClaveColumna[]>(COLUMNAS_POR_DEFECTO);
   const [generando, setGenerando] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const seleccionadas = filtrarPorTipo(filas, tipo);
+  const cantidad = conteos[tipo];
 
   function abrir() {
     setError(null);
@@ -46,11 +48,13 @@ export function ExportarPdf({ filas, hayFiltros }: Props) {
   }
 
   async function descargar() {
-    if (columnas.length === 0 || seleccionadas.length === 0) return;
+    if (columnas.length === 0 || cantidad === 0) return;
     setGenerando(true);
     setError(null);
     try {
-      await generarPdf(seleccionadas, columnas, tipo);
+      // Los datos se piden recién acá: la página del listado no carga todos los socios.
+      const filas = await exportarSocios(filtros, tipo);
+      await generarPdf(filas, columnas, tipo);
       cerrar();
     } catch (e) {
       console.error(e);
@@ -129,8 +133,7 @@ export function ExportarPdf({ filas, hayFiltros }: Props) {
                 ))}
               </div>
               <p className="mt-2 text-xs text-slate-500">
-                Se van a exportar <strong>{seleccionadas.length}</strong>{" "}
-                {seleccionadas.length === 1 ? "socio" : "socios"}
+                Se van a exportar <strong>{cantidad}</strong> {cantidad === 1 ? "socio" : "socios"}
                 {hayFiltros ? " (respetando la búsqueda y los filtros aplicados en el listado)" : ""}.
               </p>
             </fieldset>
@@ -175,7 +178,7 @@ export function ExportarPdf({ filas, hayFiltros }: Props) {
             </button>
             <button
               type="submit"
-              disabled={generando || columnas.length === 0 || seleccionadas.length === 0}
+              disabled={generando || columnas.length === 0 || cantidad === 0}
               className="inline-flex items-center justify-center gap-1.5 rounded-md bg-boca-azul px-4 py-2 text-sm font-semibold text-boca-amarillo shadow transition hover:bg-boca-azul-claro disabled:opacity-60"
             >
               <FileDown className="h-4 w-4" aria-hidden />

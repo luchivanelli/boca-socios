@@ -12,13 +12,14 @@ import { PanelFiltros } from "@/components/PanelFiltros";
 import { SelectAuto } from "@/components/SelectAuto";
 import { Resumen } from "@/components/Resumen";
 import { SelectorAnio } from "@/components/SelectorAnio";
+import { Paginacion } from "@/components/Paginacion";
 import { ESTADO_LABEL, ESTADOS, MESES, METODO_PAGO_LABEL, METODOS_PAGO } from "@/lib/constants";
-import { etiquetaCuota, formatearMes } from "@/lib/cuotas";
-import type { SocioExportable } from "@/lib/exportar";
+import { getListadoSocios } from "@/lib/listado";
 import {
   FILTROS_CUOTAS,
   leerAnio,
   leerCuotas,
+  leerEntero,
   leerEstado,
   leerMetodoPago,
   leerOrden,
@@ -29,17 +30,11 @@ import {
   type Orden,
   type SearchParams,
 } from "@/lib/params";
-import {
-  calcularDeuda,
-  esDebitoAutomatico,
-  estadosDelAnio,
-  getAltasBajasPorMes,
-  getResumenAnios,
-  getSocios,
-  ultimoMesExigible,
-} from "@/lib/socios";
+import { getAltasBajasPorMes, getResumenAnios, ultimoMesExigible } from "@/lib/socios";
 
 export const dynamic = "force-dynamic";
+
+const POR_PAGINA = 50;
 
 export default async function SociosPage({
   searchParams,
@@ -57,48 +52,15 @@ export default async function SociosPage({
   const orden = leerOrden(sp);
   const cuotas = leerCuotas(sp);
 
-  const [socios, { anios, anioInicio }, altasBajas] = await Promise.all([
-    getSocios({ q, estado, metodoPago, orden }),
+  const paginaPedida = Math.max(1, leerEntero(sp, "pagina", 1));
+
+  const [{ filas, conteos, pagina, paginas }, { anios }, altasBajas] = await Promise.all([
+    getListadoSocios({ q, estado, metodoPago, cuotas, orden }, { anio, pagina: paginaPedida, porPagina: POR_PAGINA }),
     getResumenAnios(),
     getAltasBajasPorMes(anio),
   ]);
 
   const mesExigible = ultimoMesExigible(anio);
-  const filas = socios
-    .map((socio) => ({
-      socio,
-      estados: estadosDelAnio(socio.pagos, anio),
-      deuda: calcularDeuda(socio, anioInicio),
-      debito: esDebitoAutomatico(socio),
-      inactivo: socio.estado === "INACTIVO",
-    }))
-    // La deuda se calcula en memoria, por eso este filtro va después de la consulta.
-    .filter((f) => {
-      if (cuotas === "deudores") return f.deuda.length > 0;
-      if (cuotas === "al-dia") return !f.inactivo && f.deuda.length === 0;
-      return true;
-    });
-  const anioActual = new Date().getFullYear();
-  const exportables: SocioExportable[] = filas.map(({ socio, deuda, debito, inactivo }) => ({
-    nroSocio: socio.nroSocio,
-    nombre: socio.nombre,
-    apellido: socio.apellido,
-    dni: socio.dni,
-    localidad: socio.localidad,
-    direccion: socio.direccion ?? "",
-    telefono: socio.telefono ?? "",
-    estado: ESTADO_LABEL[socio.estado],
-    carnet: socio.carnet ? "Sí" : "No",
-    metodoPago: METODO_PAGO_LABEL[socio.metodoPago],
-    fechaAlta: formatearMes(socio.fechaAlta),
-    observaciones: socio.observaciones ?? "",
-    deudaCantidad: deuda.length,
-    deudaDetalle: deuda.map((c) => etiquetaCuota(c, anioActual)).join(", "),
-    inactivo,
-    debito,
-  }));
-  const activos = filas.filter((f) => !f.inactivo).length;
-  const deudores = filas.filter((f) => f.deuda.length > 0).length;
   const filtrosActivos = [q, estado, metodoPago, cuotas, orden !== ORDEN_POR_DEFECTO].filter(Boolean).length;
   const hayFiltros = filtrosActivos > 0;
 
@@ -118,7 +80,11 @@ export default async function SociosPage({
           <Suspense>
             <SelectorAnio anios={anios} anio={anio} />
           </Suspense>
-          <ExportarPdf filas={exportables} hayFiltros={hayFiltros} />
+          <ExportarPdf
+            filtros={{ q, estado, metodoPago, orden, anio }}
+            conteos={{ todos: conteos.total, "al-dia": conteos.alDia, deudores: conteos.deudores }}
+            hayFiltros={Boolean(q || estado || metodoPago)}
+          />
           <Link
             href="/socios/nuevo"
             className="hidden items-center gap-1.5 rounded-md bg-boca-azul px-4 py-2 text-sm font-semibold text-boca-amarillo shadow transition hover:bg-boca-azul-claro sm:inline-flex"
@@ -130,9 +96,9 @@ export default async function SociosPage({
       </div>
 
       <div className="grid grid-cols-3 gap-2 sm:gap-3">
-        <Resumen titulo="Listados" valor={socios.length} />
-        <Resumen titulo="Activos" valor={activos} />
-        <Resumen titulo="Con deuda" valor={deudores} resaltar={deudores > 0} />
+        <Resumen titulo="Listados" valor={conteos.listados} />
+        <Resumen titulo="Activos" valor={conteos.activos} />
+        <Resumen titulo="Con deuda" valor={conteos.deudores} resaltar={conteos.deudores > 0} />
       </div>
 
       <AltasBajas anio={anio} datos={altasBajas} />
@@ -246,7 +212,7 @@ export default async function SociosPage({
             <li
               key={socio.id}
               className={`rounded-lg border bg-white p-2.5 shadow-sm ${
-                deuda.length > 0 ? "border-amber-300" : "border-slate-200"
+                deuda > 0 ? "border-amber-300" : "border-slate-200"
               } ${inactivo ? "opacity-70" : ""}`}
             >
               <div className="flex items-center justify-between gap-2">
@@ -258,7 +224,7 @@ export default async function SociosPage({
                     {socio.apellido}, {socio.nombre}
                   </span>
                 </Link>
-                <DeudaBadge cantidad={deuda.length} inactivo={inactivo} debito={debito} />
+                <DeudaBadge cantidad={deuda} inactivo={inactivo} debito={debito} />
               </div>
               <div className="mt-1.5 flex flex-wrap gap-1.5">
                 {inactivo && <EstadoBadge estado={socio.estado} />}
@@ -349,13 +315,17 @@ export default async function SociosPage({
                     />
                   )}
                   <td className="whitespace-nowrap">
-                    <DeudaBadge cantidad={deuda.length} inactivo={inactivo} debito={debito} />
+                    <DeudaBadge cantidad={deuda} inactivo={inactivo} debito={debito} />
                   </td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
+      )}
+
+      {filas.length > 0 && (
+        <Paginacion pagina={pagina} paginas={paginas} total={conteos.listados} porPagina={POR_PAGINA} sp={sp} />
       )}
     </div>
   );

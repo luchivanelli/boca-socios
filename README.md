@@ -125,6 +125,12 @@ El resultado no se guarda en la base.
   (`.cuota`) e íconos de un sprite compartido: ~9 KB por socio en vez de ~37 KB.
 - El tiempo total de cada página depende de la latencia a Neon (región `sa-east-1`). Desplegar
   la app en esa misma región (por ejemplo Vercel en `gru1`) lo reduce de ~150 ms a ~30 ms.
+- **Listado paginado de a 50** y calculado en la base (`src/lib/listado.ts`): una consulta SQL
+  devuelve por socio la cantidad de cuotas adeudadas y la grilla del año como JSON compacto, más
+  los contadores. No se traen las cuotas una por una, así la transferencia de datos de Neon por
+  carga pasa de megas a unas decenas de KB aunque haya miles de socios. Deudores y Sorteo usan la
+  misma consulta filtrada; el detalle de meses adeudados se pide solo para los deudores. El PDF
+  pide sus datos recién al descargar.
 
 ## Celular
 

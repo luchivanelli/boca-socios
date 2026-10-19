@@ -1,22 +1,25 @@
 import { Sorteo, type Participante } from "@/components/Sorteo";
 import { MESES_LARGO } from "@/lib/constants";
 import { requerirSesion } from "@/lib/auth";
-import { calcularDeuda, getAnioInicio, getSocios } from "@/lib/socios";
+import { getTodosLosSocios } from "@/lib/listado";
 
 export const dynamic = "force-dynamic";
 
 export default async function SorteoPage() {
   await requerirSesion("superadmin");
   const hoy = new Date();
-  const [socios, anioInicio] = await Promise.all([
-    getSocios({ estado: "ACTIVO", orden: "nroSocio-asc" }),
-    getAnioInicio(),
-  ]);
-
   // Participan solo los activos sin cuotas adeudadas (incluye débito automático).
-  const participantes: Participante[] = socios
-    .filter((s) => calcularDeuda(s, anioInicio, hoy).length === 0)
-    .map((s) => ({ id: s.id, nombre: s.nombre, apellido: s.apellido, nroSocio: s.nroSocio }));
+  const filas = await getTodosLosSocios(
+    { estado: "ACTIVO", cuotas: "al-dia", orden: "nroSocio-asc" },
+    hoy.getFullYear(),
+    hoy,
+  );
+  const participantes: Participante[] = filas.map(({ socio }) => ({
+    id: socio.id,
+    nombre: socio.nombre,
+    apellido: socio.apellido,
+    nroSocio: socio.nroSocio,
+  }));
 
   const tituloPorDefecto = `Sorteo de ${MESES_LARGO[hoy.getMonth()].toLowerCase()}`;
 

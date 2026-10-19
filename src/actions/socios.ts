@@ -7,6 +7,8 @@ import { prisma } from "@/lib/prisma";
 import { ESTADOS, ESTADOS_CUOTA, METODOS_PAGO } from "@/lib/constants";
 import { parsearMes } from "@/lib/cuotas";
 import { getAnioInicio } from "@/lib/socios";
+import { getDetalleDeuda, getTodosLosSocios } from "@/lib/listado";
+import { aExportable, type FiltrosExportacion, type SocioExportable, type TipoExportacion } from "@/lib/exportar";
 
 export type FormState = {
   error?: string;
@@ -211,4 +213,31 @@ export async function marcarCuota(
   revalidatePath("/");
   revalidatePath("/deudores");
   revalidatePath(`/socios/${socioId}`);
+}
+
+/**
+ * Devuelve los socios a exportar al PDF según los filtros del listado y el tipo elegido.
+ * Se llama recién al descargar, así la página del listado no carga de más.
+ */
+export async function exportarSocios(
+  filtros: FiltrosExportacion,
+  tipo: TipoExportacion,
+): Promise<SocioExportable[]> {
+  const hoy = new Date();
+  const filas = await getTodosLosSocios(
+    {
+      q: filtros.q,
+      estado: filtros.estado,
+      metodoPago: filtros.metodoPago,
+      orden: filtros.orden,
+      cuotas: tipo === "todos" ? undefined : tipo,
+    },
+    filtros.anio,
+    hoy,
+  );
+  const detalle = await getDetalleDeuda(
+    filas.filter((f) => f.deuda > 0).map((f) => f.socio.id),
+    hoy,
+  );
+  return filas.map((f) => aExportable(f, detalle.get(f.socio.id) ?? [], hoy.getFullYear()));
 }

@@ -5,7 +5,7 @@ import { WhatsAppButton } from "@/components/WhatsAppButton";
 import { MESES_LARGO } from "@/lib/constants";
 import { etiquetaCuota } from "@/lib/cuotas";
 import { leerEntero, type SearchParams } from "@/lib/params";
-import { calcularDeuda, getAnioInicio, getSocios } from "@/lib/socios";
+import { getDetalleDeuda, getTodosLosSocios } from "@/lib/listado";
 import { mensajeDeuda } from "@/lib/whatsapp";
 
 export const dynamic = "force-dynamic";
@@ -21,14 +21,14 @@ export default async function DeudoresPage({
   const anio = hoy.getFullYear();
   const mesActual = MESES_LARGO[hoy.getMonth()];
 
-  const [socios, anioInicio] = await Promise.all([
-    getSocios({ estado: "ACTIVO" }),
-    getAnioInicio(),
-  ]);
+  // Solo los deudores salen de la base; el detalle de meses se pide únicamente para ellos.
+  const filas = (
+    await getTodosLosSocios({ estado: "ACTIVO", cuotas: "deudores", orden: "apellido-asc" }, anio, hoy)
+  ).filter((f) => f.deuda >= minimo);
+  const detalle = await getDetalleDeuda(filas.map((f) => f.socio.id), hoy);
 
-  const deudores = socios
-    .map((socio) => ({ socio, deuda: calcularDeuda(socio, anioInicio, hoy) }))
-    .filter((f) => f.deuda.length >= minimo)
+  const deudores = filas
+    .map((f) => ({ socio: f.socio, deuda: detalle.get(f.socio.id) ?? [] }))
     .sort((a, b) => b.deuda.length - a.deuda.length || a.socio.apellido.localeCompare(b.socio.apellido));
 
   const sinTelefono = deudores.filter((d) => !d.socio.telefono).length;

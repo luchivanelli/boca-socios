@@ -1,3 +1,10 @@
+import type { Estado, MetodoPago } from "@prisma/client";
+import { ESTADO_LABEL, METODO_PAGO_LABEL } from "./constants";
+import { etiquetaCuota, formatearMes } from "./cuotas";
+import type { FilaListado } from "./listado";
+import type { Orden } from "./params";
+import type { Cuota } from "./socios";
+
 /** Fila lista para exportar: todo en texto plano para poder pasarla a un componente cliente. */
 export type SocioExportable = {
   nroSocio: number;
@@ -49,10 +56,36 @@ export type ClaveColumna = (typeof COLUMNAS_EXPORTACION)[number]["clave"];
 
 export const COLUMNAS_POR_DEFECTO: ClaveColumna[] = ["nroSocio", "apellido", "nombre"];
 
-export function filtrarPorTipo(filas: SocioExportable[], tipo: TipoExportacion) {
-  if (tipo === "deudores") return filas.filter((f) => f.deudaCantidad > 0);
-  if (tipo === "al-dia") return filas.filter((f) => !f.inactivo && f.deudaCantidad === 0);
-  return filas;
+/** Filtros del listado que viajan del modal a la server action de exportación. */
+export type FiltrosExportacion = {
+  q?: string;
+  estado?: Estado;
+  metodoPago?: MetodoPago;
+  orden?: Orden;
+  anio: number;
+};
+
+/** Pasa una fila del listado al formato plano del PDF. */
+export function aExportable(fila: FilaListado, detalle: Cuota[], anioActual: number): SocioExportable {
+  const { socio } = fila;
+  return {
+    nroSocio: socio.nroSocio,
+    nombre: socio.nombre,
+    apellido: socio.apellido,
+    dni: socio.dni,
+    localidad: socio.localidad,
+    direccion: socio.direccion ?? "",
+    telefono: socio.telefono ?? "",
+    estado: ESTADO_LABEL[socio.estado],
+    carnet: socio.carnet ? "Sí" : "No",
+    metodoPago: METODO_PAGO_LABEL[socio.metodoPago],
+    fechaAlta: formatearMes(socio.fechaAlta),
+    observaciones: socio.observaciones ?? "",
+    deudaCantidad: fila.deuda,
+    deudaDetalle: detalle.map((c) => etiquetaCuota(c, anioActual)).join(", "),
+    inactivo: fila.inactivo,
+    debito: fila.debito,
+  };
 }
 
 export function valorColumna(fila: SocioExportable, clave: ClaveColumna): string {
