@@ -73,7 +73,7 @@ export default async function DeudoresPage({
         <Resumen titulo="Sin teléfono" valor={conteos.sinTelefono} />
       </div>
 
-      <div className="sticky top-[62px] z-10 -mx-3 bg-[#f3f5fa] px-3 pb-2 sm:static sm:mx-0 sm:bg-transparent sm:px-0 sm:pb-0">
+      <div className="sticky top-[60px] z-10 -mx-3 bg-[#f3f5fa] px-3 py-2 sm:static sm:mx-0 sm:bg-transparent sm:px-0 sm:pb-0">
         <form className="grid gap-1.5 rounded-lg border border-slate-200 bg-white p-2.5 shadow-sm sm:gap-2 sm:p-3 sm:grid-cols-[1fr_auto] lg:grid-cols-[1fr_auto_auto_auto_auto] sm:items-end">
           <div>
             <label htmlFor="q" className="mb-1 block text-xs font-medium text-slate-600">
