@@ -90,7 +90,8 @@ Al pasar un socio a **Inactivo** se pide el mes de baja. Con las fechas de alta 
 muestra arriba un recuento mensual de altas y bajas del año seleccionado.
 
 Los socios con **débito automático** no tienen casillas de meses: la cuota se les descuenta
-todos los meses, así que no se marcan pagos a mano y nunca figuran como deudores.
+todos los meses, así que no se marcan pagos a mano y nunca figuran como deudores. El método
+**Bebé** funciona igual: no paga cuota, todos los meses cuentan como nulos y nunca es deudor.
 
 El selector de año sirve para ver o corregir el historial; la deuda siempre se calcula hasta hoy.
 

@@ -1,5 +1,5 @@
 import type { Estado, MetodoPago } from "@prisma/client";
-import { ESTADO_LABEL, METODO_PAGO_LABEL } from "@/lib/constants";
+import { ESTADO_LABEL, METODO_PAGO_LABEL, METODOS_SIN_CUOTA } from "@/lib/constants";
 
 export function EstadoBadge({ estado }: { estado: Estado }) {
   const clase =
@@ -15,7 +15,7 @@ export function EstadoBadge({ estado }: { estado: Estado }) {
 
 export function MetodoPagoBadge({ metodo }: { metodo: MetodoPago }) {
   const clase =
-    metodo === "DEBITO_AUTOMATICO"
+    METODOS_SIN_CUOTA.includes(metodo)
       ? "border-boca-azul bg-boca-azul text-boca-amarillo"
       : "border-boca-azul/20 bg-boca-azul/5 text-boca-azul";
   return (
@@ -37,21 +37,24 @@ export function CarnetBadge({ carnet }: { carnet: boolean }) {
   );
 }
 
-/** Estado de deuda de un socio: inactivos y débito automático no deben nada. */
+/** Estado de deuda de un socio: inactivos, débito automático y bebés no deben nada. */
 export function DeudaBadge({
   cantidad,
   inactivo,
   debito,
+  metodo,
 }: {
   cantidad: number;
   inactivo?: boolean;
+  /** Débito automático o bebé: se muestra la etiqueta del método en vez de la deuda. */
   debito?: boolean;
+  metodo?: MetodoPago;
 }) {
   if (inactivo) return <span className="text-xs text-slate-400">—</span>;
   if (debito) {
     return (
       <span className="inline-block whitespace-nowrap rounded-full border border-boca-azul/20 bg-boca-azul/5 px-2 py-0.5 text-xs font-semibold text-boca-azul">
-        Débito
+        {metodo === "BEBE" ? "Bebé" : "Débito"}
       </span>
     );
   }

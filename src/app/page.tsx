@@ -14,7 +14,7 @@ import { Resumen } from "@/components/Resumen";
 import { SelectorAnio } from "@/components/SelectorAnio";
 import { Paginacion } from "@/components/Paginacion";
 import { ScrollAlListado } from "@/components/ScrollAlListado";
-import { ESTADO_LABEL, ESTADOS, MESES, METODO_PAGO_LABEL, METODOS_PAGO } from "@/lib/constants";
+import { ESTADO_LABEL, ESTADOS, EXPLICACION_SIN_CUOTA, MESES, METODO_PAGO_LABEL, METODOS_PAGO } from "@/lib/constants";
 import { getListadoSocios } from "@/lib/listado";
 import {
   FILTROS_CUOTAS,
@@ -28,7 +28,6 @@ import {
   ORDEN_POR_DEFECTO,
   ORDENES,
   type FiltroCuotas,
-  type Orden,
   type SearchParams,
 } from "@/lib/params";
 import { getAltasBajasPorMes, getResumenAnios, ultimoMesExigible } from "@/lib/socios";
@@ -178,7 +177,7 @@ export default async function SociosPage({
                 Ordenar por
               </label>
               <SelectAuto id="orden" name="orden" defaultValue={orden} className={selectClase}>
-                {(Object.keys(ORDENES) as Orden[]).map((o) => (
+                {(Object.keys(ORDENES) as (keyof typeof ORDENES)[]).map((o) => (
                   <option key={o} value={o}>
                     {ORDENES[o]}
                   </option>
@@ -228,7 +227,7 @@ export default async function SociosPage({
                     {socio.apellido}, {socio.nombre}
                   </span>
                 </Link>
-                <DeudaBadge cantidad={deuda} inactivo={inactivo} debito={debito} />
+                <DeudaBadge cantidad={deuda} inactivo={inactivo} debito={debito} metodo={socio.metodoPago} />
               </div>
               <div className="mt-1.5 flex flex-wrap gap-1.5">
                 {inactivo && <EstadoBadge estado={socio.estado} />}
@@ -237,7 +236,7 @@ export default async function SociosPage({
               <div className="mt-2">
                 {debito ? (
                   <p className="rounded-md bg-boca-azul/5 px-2 py-1.5 text-xs text-boca-azul">
-                    Débito automático: la cuota se descuenta todos los meses, no se marcan pagos.
+                    {EXPLICACION_SIN_CUOTA[socio.metodoPago]}
                   </p>
                 ) : (
                   <CuotasSocio
@@ -309,7 +308,7 @@ export default async function SociosPage({
                   </td>
                   {debito ? (
                     <td colSpan={12} className="text-center text-xs text-boca-azul/70">
-                      Se descuenta todos los meses por débito automático
+                      {EXPLICACION_SIN_CUOTA[socio.metodoPago]}
                     </td>
                   ) : (
                     <CuotasSocio
@@ -321,7 +320,7 @@ export default async function SociosPage({
                     />
                   )}
                   <td className="whitespace-nowrap">
-                    <DeudaBadge cantidad={deuda} inactivo={inactivo} debito={debito} />
+                    <DeudaBadge cantidad={deuda} inactivo={inactivo} debito={debito} metodo={socio.metodoPago} />
                   </td>
                 </tr>
               ))}

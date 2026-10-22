@@ -1,5 +1,6 @@
 import { Prisma, type Estado, type EstadoCuota, type MetodoPago } from "@prisma/client";
 import { ORDEN_POR_DEFECTO, type FiltroCuotas, type Orden } from "./params";
+import { METODOS_SIN_CUOTA } from "./constants";
 import { prisma } from "./prisma";
 import { calcularDeuda, type Cuota } from "./socios";
 
@@ -14,6 +15,8 @@ export type FiltrosListado = {
   estado?: Estado;
   metodoPago?: MetodoPago;
   cuotas?: FiltroCuotas;
+  /** Solo socios que deben al menos esta cantidad de cuotas. */
+  minDeuda?: number;
   orden?: Orden;
 };
 
@@ -38,8 +41,9 @@ export type FilaListado = {
   socio: SocioListado;
   /** Estado de cada mes del año consultado (índice 0 = enero). */
   estados: (EstadoCuota | null)[];
-  /** Cuotas adeudadas hasta hoy (0 para inactivos y débito automático). */
+  /** Cuotas adeudadas hasta hoy (0 para inactivos y métodos sin cuota). */
   deuda: number;
+  /** Débito automático o bebé: sin grilla de meses y nunca deudor. */
   debito: boolean;
   inactivo: boolean;
 };
@@ -52,6 +56,8 @@ export type ConteosListado = {
   activos: number;
   deudores: number;
   alDia: number;
+  /** De los listados, cuántos no tienen teléfono cargado. */
+  sinTelefono: number;
 };
 
 type FilaSql = SocioListado & { deuda: number; cuotas: [number, EstadoCuota][] | null };
@@ -61,12 +67,16 @@ const ORDEN_SQL: Record<Orden, Prisma.Sql> = {
   "nroSocio-desc": Prisma.sql`"nroSocio" DESC`,
   "apellido-asc": Prisma.sql`apellido ASC, nombre ASC`,
   "apellido-desc": Prisma.sql`apellido DESC, nombre DESC`,
+  "deuda-desc": Prisma.sql`deuda DESC, apellido ASC, nombre ASC`,
+  "deuda-asc": Prisma.sql`deuda ASC, apellido ASC, nombre ASC`,
 };
 
-function condicionCuotas(cuotas?: FiltroCuotas): Prisma.Sql {
-  if (cuotas === "deudores") return Prisma.sql`deuda > 0`;
-  if (cuotas === "al-dia") return Prisma.sql`deuda = 0 AND estado = 'ACTIVO'`;
-  return Prisma.sql`TRUE`;
+function condicionCuotas(cuotas?: FiltroCuotas, minDeuda?: number): Prisma.Sql {
+  const partes: Prisma.Sql[] = [];
+  if (cuotas === "deudores") partes.push(Prisma.sql`deuda > 0`);
+  if (cuotas === "al-dia") partes.push(Prisma.sql`deuda = 0 AND estado = 'ACTIVO'`);
+  if (minDeuda && minDeuda > 0) partes.push(Prisma.sql`deuda >= ${minDeuda}::int`);
+  return partes.length > 0 ? Prisma.join(partes, " AND ") : Prisma.sql`TRUE`;
 }
 
 /**
@@ -105,7 +115,7 @@ function cteBase(filtros: FiltrosListado, anio: number, hoy: Date) {
         s.estado::text AS estado, s.carnet, s."metodoPago"::text AS "metodoPago",
         s."fechaAlta", s."fechaBaja", s.observaciones,
         CASE
-          WHEN s.estado = 'INACTIVO' OR s."metodoPago" = 'DEBITO_AUTOMATICO' THEN 0
+          WHEN s.estado = 'INACTIVO' OR s."metodoPago" IN ('DEBITO_AUTOMATICO', 'BEBE') THEN 0
           ELSE GREATEST(
             0,
             ((${anioActual}::int - i.anio) * 12 + ${mesActual}::int) - (
@@ -135,7 +145,7 @@ function aFila(f: FilaSql): FilaListado {
     socio,
     estados,
     deuda,
-    debito: socio.metodoPago === "DEBITO_AUTOMATICO",
+    debito: METODOS_SIN_CUOTA.includes(socio.metodoPago),
     inactivo: socio.estado === "INACTIVO",
   };
 }
@@ -146,11 +156,11 @@ export async function getListadoSocios(
 ) {
   const hoy = opciones.hoy ?? new Date();
   const base = cteBase(filtros, opciones.anio, hoy);
-  const filtroCuotas = condicionCuotas(filtros.cuotas);
+  const filtroCuotas = condicionCuotas(filtros.cuotas, filtros.minDeuda);
   const orden = ORDEN_SQL[filtros.orden ?? ORDEN_POR_DEFECTO];
 
   const [conteo] = await prisma.$queryRaw<
-    { total: number; listados: number; activos: number; deudores: number; al_dia: number }[]
+    { total: number; listados: number; activos: number; deudores: number; al_dia: number; sin_telefono: number }[]
   >(Prisma.sql`
     ${base}
     SELECT
@@ -158,7 +168,8 @@ export async function getListadoSocios(
       COUNT(*) FILTER (WHERE ${filtroCuotas})::int AS listados,
       COUNT(*) FILTER (WHERE estado = 'ACTIVO')::int AS activos,
       COUNT(*) FILTER (WHERE deuda > 0)::int AS deudores,
-      COUNT(*) FILTER (WHERE deuda = 0 AND estado = 'ACTIVO')::int AS al_dia
+      COUNT(*) FILTER (WHERE deuda = 0 AND estado = 'ACTIVO')::int AS al_dia,
+      COUNT(*) FILTER (WHERE (${filtroCuotas}) AND telefono IS NULL)::int AS sin_telefono
     FROM base
   `);
 
@@ -180,6 +191,7 @@ export async function getListadoSocios(
     activos: conteo.activos,
     deudores: conteo.deudores,
     alDia: conteo.al_dia,
+    sinTelefono: conteo.sin_telefono,
   };
 
   return { filas: filas.map(aFila), conteos, pagina, paginas };
@@ -191,7 +203,7 @@ export async function getTodosLosSocios(filtros: FiltrosListado, anio: number, h
   const filas = await prisma.$queryRaw<FilaSql[]>(Prisma.sql`
     ${base}
     SELECT * FROM base
-    WHERE ${condicionCuotas(filtros.cuotas)}
+    WHERE ${condicionCuotas(filtros.cuotas, filtros.minDeuda)}
     ORDER BY ${ORDEN_SQL[filtros.orden ?? ORDEN_POR_DEFECTO]}
   `);
   return filas.map(aFila);

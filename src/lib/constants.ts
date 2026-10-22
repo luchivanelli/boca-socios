@@ -19,6 +19,16 @@ export const METODO_PAGO_LABEL: Record<MetodoPago, string> = {
   TRANSFERENCIA: "Transferencia",
   DEBITO_AUTOMATICO: "Débito automático",
   COBRADOR: "Cobrador",
+  BEBE: "Bebé",
+};
+
+/** Métodos que no llevan cuotas: no se marcan meses y el socio nunca es deudor. */
+export const METODOS_SIN_CUOTA: MetodoPago[] = ["DEBITO_AUTOMATICO", "BEBE"];
+
+/** Explicación corta para mostrar en lugar de la grilla de meses. */
+export const EXPLICACION_SIN_CUOTA: Partial<Record<MetodoPago, string>> = {
+  DEBITO_AUTOMATICO: "Débito automático: la cuota se descuenta todos los meses, no se marcan pagos.",
+  BEBE: "Bebé: no paga cuota, todos los meses quedan nulos.",
 };
 
 export const ESTADOS = Object.keys(ESTADO_LABEL) as Estado[];

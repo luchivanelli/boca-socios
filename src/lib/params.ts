@@ -33,13 +33,28 @@ export const ORDENES = {
   "apellido-desc": "Alfabético (Z → A)",
 } as const;
 
-export type Orden = keyof typeof ORDENES;
+/** Órdenes de la sección Deudores. */
+export const ORDENES_DEUDORES = {
+  "deuda-desc": "Más cuotas adeudadas",
+  "deuda-asc": "Menos cuotas adeudadas",
+  "apellido-asc": "Alfabético (A → Z)",
+  "apellido-desc": "Alfabético (Z → A)",
+} as const;
+
+export type Orden = keyof typeof ORDENES | keyof typeof ORDENES_DEUDORES;
+export type OrdenDeudores = keyof typeof ORDENES_DEUDORES;
 
 export const ORDEN_POR_DEFECTO: Orden = "nroSocio-asc";
+export const ORDEN_DEUDORES_POR_DEFECTO: OrdenDeudores = "deuda-desc";
 
 export function leerOrden(sp: SearchParams): Orden {
   const v = primero(sp.orden);
   return v && v in ORDENES ? (v as Orden) : ORDEN_POR_DEFECTO;
+}
+
+export function leerOrdenDeudores(sp: SearchParams): OrdenDeudores {
+  const v = primero(sp.orden);
+  return v && v in ORDENES_DEUDORES ? (v as OrdenDeudores) : ORDEN_DEUDORES_POR_DEFECTO;
 }
 
 export const FILTROS_CUOTAS = {

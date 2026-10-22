@@ -17,6 +17,7 @@ enum MetodoPago {
   TRANSFERENCIA
   DEBITO_AUTOMATICO
   COBRADOR
+  BEBE // no paga cuota: todas quedan nulas, nunca es deudor
 }
 
 model Socio {

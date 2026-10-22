@@ -14,7 +14,7 @@ import { describirCuotas, formatearMes } from "@/lib/cuotas";
 import { leerAnio, type SearchParams } from "@/lib/params";
 import {
   calcularDeuda,
-  esDebitoAutomatico,
+  sinCuotas,
   estadosDelAnio,
   getResumenAnios,
   getSocio,
@@ -43,7 +43,7 @@ export default async function SocioPage({
   const estados = estadosDelAnio(socio.pagos, anio);
   const mesExigible = ultimoMesExigible(anio, hoy);
   const deuda = calcularDeuda(socio, anioInicio, hoy);
-  const debito = esDebitoAutomatico(socio);
+  const debito = sinCuotas(socio);
   const inactivo = socio.estado === "INACTIVO";
   const actualizar = actualizarSocio.bind(null, socio.id);
 
@@ -69,7 +69,7 @@ export default async function SocioPage({
             </span>
             {socio.fechaBaja && <span className="font-mono">Baja {formatearMes(socio.fechaBaja)}</span>}
             <EstadoBadge estado={socio.estado} />
-            <DeudaBadge cantidad={deuda.length} inactivo={inactivo} debito={debito} />
+            <DeudaBadge cantidad={deuda.length} inactivo={inactivo} debito={debito} metodo={socio.metodoPago} />
           </p>
         </div>
         {deuda.length > 0 && (
@@ -87,9 +87,18 @@ export default async function SocioPage({
           <>
             <h2 className="text-lg font-bold text-boca-azul">Cuotas</h2>
             <p className="mt-2 rounded-md bg-boca-azul/5 px-3 py-2 text-sm text-boca-azul">
-              Este socio paga por <strong>débito automático</strong>: la cuota se le descuenta
-              todos los meses, así que no hace falta marcar pagos ni figura como deudor. Si cambia
-              el método de pago, acá va a aparecer la grilla de meses.
+              {socio.metodoPago === "BEBE" ? (
+                <>
+                  Este socio es <strong>bebé</strong>: no paga cuota, todos los meses quedan nulos y
+                  nunca figura como deudor.
+                </>
+              ) : (
+                <>
+                  Este socio paga por <strong>débito automático</strong>: la cuota se le descuenta
+                  todos los meses, así que no hace falta marcar pagos ni figura como deudor.
+                </>
+              )}{" "}
+              Si cambia el método de pago, acá va a aparecer la grilla de meses.
             </p>
           </>
         ) : (

@@ -1,4 +1,5 @@
 import type { Estado, EstadoCuota, MetodoPago } from "@prisma/client";
+import { METODOS_SIN_CUOTA } from "./constants";
 import { prisma } from "./prisma";
 
 /** Solo lo que hace falta de cada cuota: evita traer id, socioId y fecha en cada fila. */
@@ -51,23 +52,23 @@ export function ultimoMesExigible(anio: number, hoy = new Date()) {
   return hoy.getMonth() + 1;
 }
 
-/** El socio paga por débito automático: no se marcan meses a mano y nunca es deudor. */
-export function esDebitoAutomatico(socio: { metodoPago: MetodoPago }) {
-  return socio.metodoPago === "DEBITO_AUTOMATICO";
+/** El socio no lleva cuotas (débito automático o bebé): no se marcan meses y nunca es deudor. */
+export function sinCuotas(socio: { metodoPago: MetodoPago }) {
+  return METODOS_SIN_CUOTA.includes(socio.metodoPago);
 }
 
 /**
  * Cuotas adeudadas: todos los meses sin registro (ni PAGO ni NULO) desde enero de
  * `anioInicio` hasta el mes actual. La deuda se arrastra de un año al siguiente.
  * Ej.: en febrero 2027, si no pagó noviembre y diciembre 2026 ni enero 2027, debe 3 cuotas.
- * Devuelve [] para inactivos y para débito automático.
+ * Devuelve [] para inactivos y para los métodos sin cuota (débito automático, bebé).
  */
 export function calcularDeuda(
   socio: { estado: Estado; metodoPago: MetodoPago; pagos: RegistroCuota[] },
   anioInicio: number,
   hoy = new Date(),
 ): Cuota[] {
-  if (socio.estado === "INACTIVO" || esDebitoAutomatico(socio)) return [];
+  if (socio.estado === "INACTIVO" || sinCuotas(socio)) return [];
   const registradas = new Set(socio.pagos.map((p) => `${p.anio}-${p.mes}`));
   const deuda: Cuota[] = [];
   for (let anio = anioInicio; anio <= hoy.getFullYear(); anio++) {

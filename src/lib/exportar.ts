@@ -24,6 +24,7 @@ export type SocioExportable = {
   /** Meses adeudados en texto, ej. "Nov 2026, Ene, Feb". */
   deudaDetalle: string;
   inactivo: boolean;
+  /** Débito automático o bebé. */
   debito: boolean;
 };
 
@@ -91,7 +92,7 @@ export function aExportable(fila: FilaListado, detalle: Cuota[], anioActual: num
 export function valorColumna(fila: SocioExportable, clave: ClaveColumna): string {
   if (clave === "deuda") {
     if (fila.inactivo) return "—";
-    if (fila.debito) return "Débito automático";
+    if (fila.debito) return fila.metodoPago;
     if (fila.deudaCantidad === 0) return "Al día";
     const cuotas = fila.deudaCantidad === 1 ? "1 cuota" : `${fila.deudaCantidad} cuotas`;
     return `${cuotas}: ${fila.deudaDetalle}`;
