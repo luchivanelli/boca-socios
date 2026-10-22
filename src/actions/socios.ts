@@ -6,6 +6,7 @@ import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { ESTADOS, ESTADOS_CUOTA, METODOS_PAGO } from "@/lib/constants";
 import { parsearMes } from "@/lib/cuotas";
+import { capitalizar } from "@/lib/texto";
 import { getAnioInicio } from "@/lib/socios";
 import { getDetalleDeuda, getTodosLosSocios } from "@/lib/listado";
 import { aExportable, type FiltrosExportacion, type SocioExportable, type TipoExportacion } from "@/lib/exportar";
@@ -42,12 +43,12 @@ function texto(formData: FormData, campo: string) {
 function validar(formData: FormData): { datos?: DatosSocio; errores: Record<string, string> } {
   const errores: Record<string, string> = {};
 
-  const nombre = texto(formData, "nombre");
-  const apellido = texto(formData, "apellido");
+  const nombre = capitalizar(texto(formData, "nombre"));
+  const apellido = capitalizar(texto(formData, "apellido"));
   const nroSocioTexto = texto(formData, "nroSocio");
   const dni = texto(formData, "dni").replace(/\./g, "");
-  const localidad = texto(formData, "localidad");
-  const direccion = texto(formData, "direccion");
+  const localidad = capitalizar(texto(formData, "localidad"));
+  const direccion = capitalizar(texto(formData, "direccion"));
   const telefono = texto(formData, "telefono");
   const estado = texto(formData, "estado") as Estado;
   const metodoPago = texto(formData, "metodoPago") as MetodoPago;
