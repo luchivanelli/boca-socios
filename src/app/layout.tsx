@@ -44,7 +44,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           <main className="mx-auto w-full max-w-[96rem] flex-1 px-3 py-6 sm:px-4">{children}</main>
         ) : (
           <>
-        <header className="sticky top-0 z-20 bg-boca-azul text-white shadow-md">
+        <header className="sticky top-0 z-40 bg-boca-azul text-white shadow-md">
           <div className="mx-auto flex max-w-[96rem] items-center justify-between gap-3 px-4 py-2.5">
             <Link href="/" className="flex items-center gap-3">
               <Image

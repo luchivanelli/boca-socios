@@ -94,6 +94,25 @@ todos los meses, así que no se marcan pagos a mano y nunca figuran como deudore
 
 El selector de año sirve para ver o corregir el historial; la deuda siempre se calcula hasta hoy.
 
+## Importar socios desde Excel
+
+`scripts/importar-socios.mts` carga la planilla `src/socios.xlsx` (hoja `2026`, columnas del Excel
+original). Primero en simulación, que muestra el resumen y las anomalías sin escribir nada; con
+`--aplicar` inserta todo en una transacción. Salta los números de socio que ya existen.
+
+```bash
+npx tsx scripts/importar-socios.mts            # simulación
+npx tsx scripts/importar-socios.mts --aplicar  # inserta
+```
+
+Reglas de interpretación (detalladas en el encabezado del script): "Localidad" con número es
+dirección y la localidad pasa a ser Arroyo Seco; X en un mes es cuota paga; menciones de baja,
+renuncia o fallecimiento marcan al socio inactivo; la columna sin título se lee como método de
+pago y, si es otra cosa, va a Observaciones junto con todo texto que no encaje en un campo. Sin
+fecha de alta en la planilla se usa el primer mes con X (los anteriores quedan nulos) o enero.
+
+Las planillas `.xlsx` están en `.gitignore` porque contienen datos personales.
+
 ## Login y roles
 
 La app pide usuario y contraseña. Hay dos usuarios fijos definidos en `.env` (no hay tabla de usuarios):

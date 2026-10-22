@@ -47,7 +47,7 @@ export function Paginacion({ pagina, paginas, total, porPagina, sp }: Props) {
       {paginas > 1 && (
         <div className="flex items-center gap-1">
           {pagina > 1 ? (
-            <Link href={href(sp, pagina - 1)} aria-label="Página anterior" className={`${botonClase} border-slate-300 text-boca-azul hover:bg-boca-amarillo-suave`}>
+            <Link href={href(sp, pagina - 1)} scroll={false} aria-label="Página anterior" className={`${botonClase} border-slate-300 text-boca-azul hover:bg-boca-amarillo-suave`}>
               <ChevronLeft className="h-4 w-4" aria-hidden />
             </Link>
           ) : (
@@ -63,14 +63,14 @@ export function Paginacion({ pagina, paginas, total, porPagina, sp }: Props) {
                   {n}
                 </span>
               ) : (
-                <Link href={href(sp, n)} className={`${botonClase} border-slate-300 text-boca-azul hover:bg-boca-amarillo-suave`}>
+                <Link href={href(sp, n)} scroll={false} className={`${botonClase} border-slate-300 text-boca-azul hover:bg-boca-amarillo-suave`}>
                   {n}
                 </Link>
               )}
             </span>
           ))}
           {pagina < paginas ? (
-            <Link href={href(sp, pagina + 1)} aria-label="Página siguiente" className={`${botonClase} border-slate-300 text-boca-azul hover:bg-boca-amarillo-suave`}>
+            <Link href={href(sp, pagina + 1)} scroll={false} aria-label="Página siguiente" className={`${botonClase} border-slate-300 text-boca-azul hover:bg-boca-amarillo-suave`}>
               <ChevronRight className="h-4 w-4" aria-hidden />
             </Link>
           ) : (

@@ -24,7 +24,7 @@ model Socio {
   nombre        String
   apellido      String
   nroSocio      Int        @unique
-  dni           String     @unique
+  dni           String
   localidad     String
   direccion     String?
   telefono      String?

@@ -39,3 +39,7 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Planillas con datos personales de socios (no subir)
+src/*.xlsx
+*.xlsx

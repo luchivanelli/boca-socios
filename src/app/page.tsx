@@ -13,6 +13,7 @@ import { SelectAuto } from "@/components/SelectAuto";
 import { Resumen } from "@/components/Resumen";
 import { SelectorAnio } from "@/components/SelectorAnio";
 import { Paginacion } from "@/components/Paginacion";
+import { ScrollAlListado } from "@/components/ScrollAlListado";
 import { ESTADO_LABEL, ESTADOS, MESES, METODO_PAGO_LABEL, METODOS_PAGO } from "@/lib/constants";
 import { getListadoSocios } from "@/lib/listado";
 import {
@@ -205,6 +206,9 @@ export default async function SociosPage({
         </div>
       )}
 
+      <ScrollAlListado clave={`${pagina}-${q ?? ""}-${estado ?? ""}-${metodoPago ?? ""}-${cuotas ?? ""}-${orden}`} />
+      <div id="listado" className="scroll-mt-44 sm:scroll-mt-20" />
+
       {/* Celular: tarjetas */}
       {filas.length > 0 && vista === "tarjetas" && (
         <ul className="space-y-2">
@@ -252,7 +256,7 @@ export default async function SociosPage({
 
       {/* Escritorio: tabla */}
       {filas.length > 0 && vista === "tabla" && (
-        <div className="max-h-[70vh] overflow-auto rounded-lg border border-slate-200 bg-white shadow-sm">
+        <div id="tabla-socios" className="max-h-[70vh] overflow-auto rounded-lg border border-slate-200 bg-white shadow-sm">
           <table className="tabla-socios w-full border-separate border-spacing-0 text-sm">
             <thead className="sticky top-0 z-20 bg-boca-azul text-left text-xs uppercase tracking-wide text-white">
               <tr>
@@ -260,6 +264,7 @@ export default async function SociosPage({
                 <th className="sticky left-14 z-30 bg-boca-azul px-2 py-2 shadow-[4px_0_6px_-4px_rgba(0,0,0,0.35)]">Socio</th>
                 <th className="px-2 py-2">DNI</th>
                 <th className="px-2 py-2">Localidad</th>
+                <th className="px-2 py-2">Dirección</th>
                 <th className="px-2 py-2">Alta</th>
                 <th className="px-2 py-2">Pago</th>
                 {MESES.map((m, i) => (
@@ -295,6 +300,7 @@ export default async function SociosPage({
                   </td>
                   <td className="font-mono text-xs">{socio.dni}</td>
                   <td className="text-xs">{socio.localidad}</td>
+                  <td className="text-xs">{socio.direccion ?? <span className="text-slate-300">—</span>}</td>
                   <td>
                     <EstadoBadge estado={socio.estado} />
                   </td>
